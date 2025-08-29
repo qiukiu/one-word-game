@@ -1,4 +1,3 @@
-```dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -39,4 +38,3 @@ class _GamePageState extends State<GamePage> {
 final TextEditingController _controller = TextEditingController();
 final String gameId = "demo-game"; // temporary shared room
 final String playerId = DateTime.now().millisecondsSinceEpoch.toString();
-```
