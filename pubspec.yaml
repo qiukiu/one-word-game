@@ -1,5 +1,5 @@
 name: one_word_game
-description: A 2-player word association game with Flutter + Firebase.
+description: A 2-player word association game using WebSocket.
 version: 1.0.0+1
 
 environment:
@@ -8,8 +8,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  firebase_core: ^2.15.1
-  cloud_firestore: ^4.9.2
+  web_socket_channel: ^2.3.0
 
 dev_dependencies:
   flutter_test:
