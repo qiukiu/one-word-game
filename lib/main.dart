@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+void main() {
   runApp(const OneWordApp());
 }
 
@@ -16,38 +13,44 @@ class OneWordApp extends StatelessWidget {
     return MaterialApp(
       title: 'One Word Game',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: const GamePage(),
+      home: GamePage(),
     );
   }
 }
 
 class GamePage extends StatefulWidget {
-  const GamePage({super.key});
-
   @override
   State<GamePage> createState() => _GamePageState();
 }
 
 class _GamePageState extends State<GamePage> {
-  final TextEditingController _controller = TextEditingController();
-  final String gameId = "demo-game"; // temporary shared room
-  final String playerId = DateTime.now().millisecondsSinceEpoch.toString();
+  final _controller = TextEditingController();
+  final _channel = WebSocketChannel.connect(
+    Uri.parse('ws://localhost:8080'),
+  );
+  final List<String> _words = [];
 
-  void _submitWord() async {
-    if (_controller.text.isEmpty) return;
+  void _sendWord() {
+    if (_controller.text.isNotEmpty) {
+      _channel.sink.add(_controller.text.trim());
+      _controller.clear();
+    }
+  }
 
-    final roundRef = FirebaseFirestore.instance
-        .collection('games')
-        .doc(gameId)
-        .collection('rounds')
-        .doc(DateTime.now().millisecondsSinceEpoch.toString());
-
-    await roundRef.set({
-      'playerId': playerId,
-      'word': _controller.text.trim().toLowerCase(),
+  @override
+  void initState() {
+    super.initState();
+    _channel.stream.listen((message) {
+      setState(() {
+        _words.add(message);
+      });
     });
+  }
 
-    _controller.clear();
+  @override
+  void dispose() {
+    _channel.sink.close();
+    super.dispose();
   }
 
   @override
@@ -57,29 +60,8 @@ class _GamePageState extends State<GamePage> {
       body: Column(
         children: [
           Expanded(
-            child: StreamBuilder(
-              stream: FirebaseFirestore.instance
-                  .collection('games')
-                  .doc(gameId)
-                  .collection('rounds')
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final docs = snapshot.data!.docs;
-
-                return ListView.builder(
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final data = docs[index].data() as Map<String, dynamic>;
-                    return ListTile(
-                      title: Text(data['word'] ?? ''),
-                      subtitle: Text("Player: ${data['playerId']}"),
-                    );
-                  },
-                );
-              },
+            child: ListView(
+              children: _words.map((w) => ListTile(title: Text(w))).toList(),
             ),
           ),
           Padding(
@@ -97,7 +79,7 @@ class _GamePageState extends State<GamePage> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.send),
-                  onPressed: _submitWord,
+                  onPressed: _sendWord,
                 ),
               ],
             ),
